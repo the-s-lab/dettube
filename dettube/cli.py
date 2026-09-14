@@ -1,9 +1,8 @@
 """Command-line entry points.
 
-    dettube plot        <shot> [--sensor pt|pdt] [--per-station]
-    dettube velocity    <shot> [--sensor pt|pdt]
-    dettube conditions  <shot> [--csv FILE]
-    dettube export      <shot> [--raw] [--full] [--every N]
+The user-facing text lives in OVERVIEW and in each subparser's description and
+epilog below, not here: this docstring is for whoever maintains the file, and
+the two audiences want different things said.
 
 Each subcommand also installs as its own console script — `dettube-plot`,
 `dettube-velocity`, `dettube-conditions`, `dettube-export` — for anyone who
@@ -271,65 +270,198 @@ def cmd_export(args) -> int:
     return 0
 
 
+OVERVIEW = """\
+Read a detonation-tube shot recorded as LabVIEW TDMS: plot every channel, pick
+the pressure and flame fronts, report what was in the tube beforehand, and write
+it all out as CSV.
+
+START HERE
+  Nothing about any tube is built in, so the first thing to do is point dettube
+  at a rig file describing yours. If your lab already has one, name it once:
+
+      export DETTUBE_RIG=/path/to/yourrig.toml      (Windows: set DETTUBE_RIG=...)
+
+  and every command below finds it. If you need to make one:
+
+      dettube rig --template yourrig.toml           write a commented example
+      <edit it: station positions, channel numbers>
+      dettube rig --rig yourrig.toml                check it reads back correctly
+
+THEN, on a shot folder — the one holding that shot's .tdms files
+      dettube conditions SHOT      what the instruments read before ignition
+      dettube plot SHOT            every pressure channel, stacked by position
+      dettube velocity SHOT        arrival times and segment velocities
+      dettube export SHOT --raw    CSVs of the results and the raw samples
+
+  Leave SHOT off any of them to get a folder picker instead.
+"""
+
+EPILOG = """\
+examples
+  dettube conditions "D:\\shots\\03.100926"
+  dettube plot "D:\\shots\\03.100926" --sensor pdt
+  dettube velocity "D:\\shots\\03.100926" --show
+  dettube export "D:\\shots\\03.100926" --raw --every 10
+
+  dettube plot            pick the folder from a dialog
+
+Run `dettube <command> --help` for what each one does and what it writes.
+Full documentation: https://github.com/the-s-lab/dettube
+"""
+
+RIG_HELP = ("rig file describing the tube. Default: $DETTUBE_RIG, then "
+            "./rig.toml, then ~/.config/dettube/rig.toml")
+SHOT_HELP = "folder holding this shot's .tdms files (omit it for a folder picker)"
+
+
 def _add_shot(p):
-    p.add_argument("shot_dir", nargs="?", type=Path,
-                   help="folder holding the shot's .tdms files (omit for a picker)")
-    p.add_argument("--rig", type=Path, default=None,
-                   help="rig definition (default: $DETTUBE_RIG, ./rig.toml, "
-                        "~/.config/dettube/rig.toml)")
+    p.add_argument("shot_dir", nargs="?", type=Path, metavar="SHOT", help=SHOT_HELP)
+    p.add_argument("--rig", type=Path, default=None, metavar="FILE", help=RIG_HELP)
+
+
+def _sub(sub, name, help_, description, epilog):
+    return sub.add_parser(name, help=help_, description=description, epilog=epilog,
+                          formatter_class=argparse.RawDescriptionHelpFormatter)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="dettube", description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        prog="dettube", description=OVERVIEW, epilog=EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", action="version", version=f"dettube {__version__}")
-    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub = ap.add_subparsers(dest="cmd", metavar="COMMAND")
 
-    p = sub.add_parser("plot", help="channel stacks, or one figure per station")
+    p = _sub(sub, "plot", "channel stacks, or one figure per station",
+             "Every channel drawn at its own position along the tube, so a front "
+             "shows up as a\ndiagonal march down the page and a faulty gauge as the "
+             "one trace out of step.\nOdd and even channels are coloured "
+             "differently: a fault affecting one side of\nthe tube then reads as a "
+             "pattern rather than as one odd-looking station.\n\nWrites a PNG beside "
+             "the data.",
+             "examples\n"
+             "  dettube plot SHOT                     pressure, all channels\n"
+             "  dettube plot SHOT --sensor pdt        photodiodes instead\n"
+             "  dettube plot SHOT --per-station       one PNG per station, both "
+             "sensors\n"
+             "  dettube plot SHOT --from-ms 0 --to-ms 20     zoom on the first 20 ms\n")
     _add_shot(p)
-    p.add_argument("--sensor", choices=("pt", "pdt"), default="pt")
+    p.add_argument("--sensor", choices=("pt", "pdt"), default="pt",
+                   help="pt = pressure transmitters (default), pdt = photodiodes")
     p.add_argument("--per-station", action="store_true",
-                   help="one PNG per station, pressure and light together")
-    p.add_argument("--gain", type=float, default=None)
-    p.add_argument("--from-ms", type=float, default=None, dest="t0")
-    p.add_argument("--to-ms", type=float, default=None, dest="t1")
-    p.add_argument("--show", action="store_true")
+                   help="one PNG per station with pressure and light together, "
+                        "instead of one stacked figure")
+    p.add_argument("--gain", type=float, default=None, metavar="G",
+                   help="vertical scale: metres of offset per unit. Raise it to "
+                        "separate crowded traces, lower it if they overlap")
+    p.add_argument("--from-ms", type=float, default=None, dest="t0", metavar="MS",
+                   help="start of the time window, ms from the ignitor spike "
+                        "(default: from the rig file)")
+    p.add_argument("--to-ms", type=float, default=None, dest="t1", metavar="MS",
+                   help="end of the time window, ms from the ignitor spike")
+    p.add_argument("--show", action="store_true",
+                   help="open the figure in a window as well as saving it")
     p.set_defaults(func=cmd_plot)
 
-    p = sub.add_parser("velocity", help="arrival times and segment velocities")
+    p = _sub(sub, "velocity", "arrival times and segment velocities",
+             "When the front reached each station, and how fast it travelled "
+             "between them.\n\nt = 0 is the ignitor's own electrical spike in the "
+             "pressure record, not any\ntimestamp written by the control software — "
+             "those have been seconds out.\n\nPicks that cannot be right are called "
+             "out rather than reported quietly: a\nstation timed before one upstream "
+             "of it breaks causality and is flagged, as is\na speed too high to be "
+             "the flame it claims to be. Prints two tables and writes\na PNG.",
+             "examples\n"
+             "  dettube velocity SHOT                 pressure front\n"
+             "  dettube velocity SHOT --sensor pdt    flame front, from the "
+             "photodiodes\n")
     _add_shot(p)
-    p.add_argument("--sensor", choices=("pt", "pdt"), default="pt")
-    p.add_argument("--show", action="store_true")
+    p.add_argument("--sensor", choices=("pt", "pdt"), default="pt",
+                   help="pt = pressure front (default), pdt = flame front")
+    p.add_argument("--show", action="store_true",
+                   help="open the figure in a window as well as saving it")
     p.set_defaults(func=cmd_velocity)
 
-    p = sub.add_parser("conditions",
-                       help="what the process instruments read before ignition")
+    p = _sub(sub, "conditions", "what the instruments read before ignition",
+             "What was actually in the tube, read from the instruments rather than "
+             "from the\nfolder name — folder names record the mixture that was aimed "
+             "at, and the two\nhave differed by over a percent.\n\nEach channel gets "
+             "its pre-ignition value, the spread around it, and the full\nrange, so "
+             "impulsive noise stays visible instead of being averaged away. "
+             "Channels\nthat drift before the shot, sit dead at the end of their "
+             "range, or respond\nfaster than any real instrument could are each "
+             "flagged.\n\nIf the rig file names a control-system log, that is read "
+             "too: which valves were\nopen, and how long before ignition.",
+             "examples\n"
+             "  dettube conditions SHOT               print the table\n"
+             "  dettube conditions SHOT --csv out/    also write two CSVs there\n")
     _add_shot(p)
     p.add_argument("--csv", nargs="?", const=".", default=None, metavar="FILE",
-                   help="also write a CSV (a folder is accepted; default ./)")
+                   help="also write <shot>_conditions.csv and <shot>_events.csv. "
+                        "Give a folder or a filename; bare --csv means here")
     p.set_defaults(func=cmd_conditions)
 
-    p = sub.add_parser("rig", help="show the rig in use, or write a template")
-    p.add_argument("--rig", type=Path, default=None)
+    p = _sub(sub, "rig", "show the rig in use, or write a template",
+             "Every other command needs to be told where the gauges are. This one "
+             "shows the\nrig currently in effect, or writes a commented example to "
+             "start from.\n\nKeep rig files out of shared repositories if their "
+             "dimensions come from drawings\nunder confidentiality — point dettube at "
+             "one with $DETTUBE_RIG instead.",
+             "examples\n"
+             "  dettube rig                           show the rig now in effect\n"
+             "  dettube rig --template myrig.toml     write a commented example\n"
+             "  dettube rig --rig myrig.toml          read that one back to check "
+             "it\n")
+    p.add_argument("--rig", type=Path, default=None, metavar="FILE", help=RIG_HELP)
     p.add_argument("--template", nargs="?", const="rig.toml", default=None,
-                   metavar="FILE", help="write a documented example rig file")
-    p.add_argument("--force", action="store_true", help="overwrite an existing file")
+                   metavar="FILE",
+                   help="write a commented example rig file and stop "
+                        "(default name: rig.toml)")
+    p.add_argument("--force", action="store_true",
+                   help="overwrite the file if --template would replace one")
     p.set_defaults(func=cmd_rig)
 
-    p = sub.add_parser("export", help="write CSVs of results and raw samples")
+    p = _sub(sub, "export", "write CSVs of results and raw samples",
+             "The picked arrivals and velocities as CSV, and with --raw the samples "
+             "they came\nfrom. Every raw file carries a t_ms column measured from the "
+             "ignitor spike, so\nthe groups line up with each other despite being "
+             "separate DAQ tasks with\ndifferent start times.\n\nRaw exports get "
+             "large — a 16-channel photodiode record at 100 kHz is well over\n100 MB "
+             "written whole. The default window is the event; --full and --every "
+             "change\nthat. Each file's size is printed as it is written.",
+             "examples\n"
+             "  dettube export SHOT                   results only, into SHOT/csv/\n"
+             "  dettube export SHOT --raw             + raw samples around the event\n"
+             "  dettube export SHOT --raw --every 10  + raw, decimated 10:1\n"
+             "  dettube export SHOT --raw --full      + every sample (large)\n")
     _add_shot(p)
-    p.add_argument("--raw", action="store_true")
-    p.add_argument("--full", action="store_true")
-    p.add_argument("--every", type=int, default=1, metavar="N")
-    p.add_argument("--from-ms", type=float, default=-20.0, dest="t0")
-    p.add_argument("--to-ms", type=float, default=120.0, dest="t1")
-    p.add_argument("--outdir", type=Path, default=None)
+    p.add_argument("--raw", action="store_true",
+                   help="also write the raw samples, one CSV per DAQ group")
+    p.add_argument("--full", action="store_true",
+                   help="with --raw, write the whole record instead of just the "
+                        "window around the event")
+    p.add_argument("--every", type=int, default=1, metavar="N",
+                   help="with --raw, keep every Nth sample to cut the file size")
+    p.add_argument("--from-ms", type=float, default=-20.0, dest="t0", metavar="MS",
+                   help="with --raw, start of the window, ms from the spike "
+                        "(default: -20)")
+    p.add_argument("--to-ms", type=float, default=120.0, dest="t1", metavar="MS",
+                   help="with --raw, end of the window, ms from the spike "
+                        "(default: 120)")
+    p.add_argument("--outdir", type=Path, default=None, metavar="DIR",
+                   help="where to write (default: a csv/ folder beside the data)")
     p.set_defaults(func=cmd_export)
     return ap
 
 
 def main(argv=None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    # Bare `dettube` should teach rather than scold. argparse's own answer to a
+    # missing subcommand is a usage line and exit code 2, which tells a first-time
+    # user nothing about what the tool is for or that it needs a rig file first.
+    if getattr(args, "cmd", None) is None:
+        parser.print_help()
+        return 0
     return args.func(args)
 
 

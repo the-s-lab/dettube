@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dettube"
-version = "0.1.0"
+version = "0.1.1"
 description = "Quick-look tools for detonation-tube shots recorded as LabVIEW TDMS"
 readme = "README.md"
 requires-python = ">=3.9"
