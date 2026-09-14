@@ -231,7 +231,14 @@ def load(path: str | Path | None = None) -> dict:
     """Read a rig file and return it in the shape the rest of the package uses."""
     p = find_rig(path)
     with open(p, "rb") as fh:
-        raw = tomllib.load(fh)
+        try:
+            raw = tomllib.load(fh)
+        except tomllib.TOMLDecodeError as exc:
+            # The parser's message names the line and column, which is the useful
+            # part; a stack trace through the TOML library is not, and every other
+            # failure in this tool reports itself in one line.
+            raise RigError(f"{p} is not valid TOML.\n  {exc}\n"
+                           "  Compare it against a fresh `dettube rig --template`.")
 
     stations = raw.get("station") or []
     if not stations:

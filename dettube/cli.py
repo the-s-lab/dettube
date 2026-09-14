@@ -251,6 +251,17 @@ def _print_events(res) -> None:
 
 def cmd_export(args) -> int:
     load_rig(args.rig)
+    # Checked before any file is read, so a typo costs a second rather than the
+    # minutes it takes to decode four TDMS groups.
+    if args.every < 1:
+        raise SystemExit(f"--every {args.every} makes no sense: it is how many "
+                         "samples to step by,\n  so the smallest useful value is 1 "
+                         "(keep everything).")
+    if args.raw and not args.full and args.t0 >= args.t1:
+        raise SystemExit(
+            f"The time window runs backwards: --from-ms {args.t0:g} is not before "
+            f"--to-ms {args.t1:g}.\n  No samples fall inside it, so the raw files "
+            "would come out empty.")
     shot = _resolve(args.shot_dir)
     outdir = args.outdir or (shot / "csv")
     outdir.mkdir(parents=True, exist_ok=True)

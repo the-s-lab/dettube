@@ -19,6 +19,6 @@ Two things it handles that trip people up:
 """
 from .core import CFG, COND, GROUPS, PAIRS, SENSORS, find_spark, load_rig, read_group  # noqa: F401
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __all__ = ["PAIRS", "SENSORS", "GROUPS", "CFG", "COND",
            "load_rig", "read_group", "find_spark"]

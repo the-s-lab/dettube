@@ -28,6 +28,15 @@ def stack_figure(shot_dir: Path, sensor: str, gain: float | None,
     gain = cfg["gain"] if gain is None else gain
     t0_ms = cfg["win"][0] if t0_ms is None else t0_ms
     t1_ms = cfg["win"][1] if t1_ms is None else t1_ms
+    # Checked after the rig defaults are filled in, because only one of the two
+    # may have been given on the command line. An inverted window selects no
+    # samples, and the figure it saves is an empty frame — which would overwrite
+    # a good one from an earlier run without a word.
+    if t0_ms >= t1_ms:
+        raise SystemExit(
+            f"The time window runs backwards: --from-ms {t0_ms:g} is not before "
+            f"--to-ms {t1_ms:g}.\n  Nothing would be plotted, and the empty figure "
+            "would overwrite the last good one.")
 
     files = sorted(shot_dir.glob(cfg["glob"]))
     if not files:
