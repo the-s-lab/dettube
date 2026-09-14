@@ -75,7 +75,7 @@ def summarise(per: dict, notes: list, enforce_causality: bool = False) -> dict:
         fast = [s for s in segs if s["v"] and s["v"] > CFG["pdt_implausible_mps"]]
         if fast:
             warnings.append(
-                "a flame segment exceeds " + f"{CFG["pdt_implausible_mps"]:.0f} m/s "
+                f"a flame segment exceeds {CFG['pdt_implausible_mps']:.0f} m/s "
                 f"({max(s['v'] for s in fast):.0f} m/s over "
                 f"{fast[0]['x1']:.2f}-{fast[0]['x2']:.2f} m).\n     That is at or above "
                 "the choked-flame speed and is almost certainly a mis-picked glow, not a "
@@ -109,7 +109,8 @@ def analyse_pdt(group, inc: float, spark: float):
             fwhm = int((w > 0.5 * pk).sum()) * inc * 1e3 if pk > 0 else 0.0
             if pk < CFG["pdt_min_peak"] or fwhm < CFG["pdt_min_fwhm_ms"]:
                 notes.append(f"{cname} rejected: peak {pk:.3f} V, glow {fwhm:.1f} ms "
-                             f"(need {CFG["pdt_min_peak"]} V and {CFG["pdt_min_fwhm_ms"]} ms)")
+                             f"(need {CFG['pdt_min_peak']} V "
+                             f"and {CFG['pdt_min_fwhm_ms']} ms)")
                 continue
             cand[ch] = dict(sd=sd, peak=pk, fwhm=fwhm, snr=pk / sd,
                             arrival=float(tw[int(np.argmax(w))]))

@@ -110,8 +110,8 @@ def cmd_velocity(args) -> int:
     print(f"\n  {'segment':<16}{'dt (ms)':>9}{'velocity (m/s)':>16}")
     for s in res["segments"]:
         v = "  n/a" if not s["v"] else f"{s['v']:.0f}"
-        print(f"  {f'{s[chr(120)+chr(49)]:.2f} -> {s[chr(120)+chr(50)]:.2f} m':<16}"
-              f"{s['dt_ms']:>9.2f}{v:>16}")
+        seg = f"{s['x1']:.2f} -> {s['x2']:.2f} m"
+        print(f"  {seg:<16}{s['dt_ms']:>9.2f}{v:>16}")
     if res["fit"]:
         print(f"\n  straight-line fit {res['fit']:.0f} m/s   R² {res['r2']:.3f}")
     if not res["monotonic"]:
