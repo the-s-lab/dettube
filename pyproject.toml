@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dettube"
+version = "0.1.0"
+description = "Quick-look tools for detonation-tube shots recorded as LabVIEW TDMS"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Thirakorn Mokkawes" }]
+keywords = ["detonation", "TDMS", "LabVIEW", "combustion", "shock-tube", "deflagration"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "npTDMS>=1.6",
+    "numpy>=1.22",
+    "matplotlib>=3.5",
+    "tomli>=1.1; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+# The folder picker uses tkinter, which ships with most CPython builds but is a
+# separate OS package on some Linux distributions (apt install python3-tk).
+# Nothing to install from PyPI for it — listed here only so the need is recorded.
+gui = []
+
+[project.urls]
+# PyPI shows these on the project page and does NOT check that they resolve, so
+# a dead link here is published as-is and can only be corrected by releasing a
+# new version. The repository must exist and be public before upload.
+Homepage = "https://github.com/the-s-lab/dettube"
+Source = "https://github.com/the-s-lab/dettube"
+Issues = "https://github.com/the-s-lab/dettube/issues"
+
+[project.scripts]
+dettube = "dettube.cli:main"
+dettube-plot = "dettube.cli:main_plot"
+dettube-velocity = "dettube.cli:main_velocity"
+dettube-export = "dettube.cli:main_export"
+dettube-conditions = "dettube.cli:main_conditions"
+
+[tool.setuptools]
+packages = ["dettube"]

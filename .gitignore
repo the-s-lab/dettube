@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+# Rig files describe a specific tube and may carry dimensions taken from
+# drawings under confidentiality. Keep them out of this repository; point
+# dettube at one with --rig or $DETTUBE_RIG.
+rig.toml
+*-rig.toml
