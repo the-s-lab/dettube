@@ -31,7 +31,12 @@ def _resolve(shot_dir: Path | None) -> Path:
         raise SystemExit("No folder chosen.")
     if not shot.is_dir():
         raise SystemExit(f"Not a folder: {shot}")
-    return shot
+    # Resolved, because the shot's NAME goes into every filename written, every
+    # plot title, and the shot column of every CSV — and `Path(".").name` is the
+    # empty string. Running this from inside the shot folder is the obvious thing
+    # to do, and unresolved it produces `velocity_PT_.png`: nameless, and the same
+    # name for every shot, so each run silently overwrites the last.
+    return shot.resolve()
 
 
 def cmd_rig(args) -> int:
