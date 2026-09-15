@@ -161,7 +161,7 @@ Where a station's two gauges differ in peak amplitude by more than 2×, the
 **louder one is dropped** and the quieter kept, and the choice is printed:
 
 ```
-! A4 (6.00 m): PT-14 reads 28.6 barg against PT-13's 4.0 — dropped, using PT-13
+! S3 (3.05 m): PT-06 reads 28.6 barg against PT-05's 4.0 — dropped, using PT-05
 ```
 
 ## Photodiodes — `--sensor pdt`
@@ -269,10 +269,10 @@ record of a shot's configuration is its folder name, which states what was
 intended rather than what happened.
 
 ```
-How the shot was set up — Ignition Report20260910_110457.csv
+How the shot was set up — Ignition Report20250416_110457.csv
   ignition logged at   11:04:58.876
-  shut    water curtain SV01 (centre of A1, 1.00 m)
-  OPEN    water curtain SV04 (centre of B3, 4.50 m)
+  shut    water curtain SV01 (centre of S1)
+  OPEN    water curtain SV02 (centre of S3)
   mist valve opened at 11:04:53.358   5.52 s before ignition
 ```
 
