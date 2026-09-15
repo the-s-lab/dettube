@@ -7,8 +7,24 @@ from pathlib import Path
 import numpy as np
 
 from .analysis import analyse, analyse_pdt
-from .core import (CFG, COL_EVEN, COL_ODD, PAIRS, SENSORS, find_spark,
-                   read_group, smooth)
+from .core import (CFG, COL_EVEN, COL_ODD, PAIRS, RIG, SENSORS, find_spark,
+                   read_group, rig_stamp, smooth)
+
+
+def _axis_label() -> str:
+    """Axis label naming the rig's own datum, not an assumed one."""
+    return f"distance from {RIG.get('origin', 'the datum')} (m)"
+
+
+def _span(pad_lo: float = 0.3, pad_hi: float = 1.3):
+    """Axis limits from the stations actually defined, with room for labels.
+
+    Fixed limits here were this tube's: 0.3 to 8.3 m. On a tube of any other
+    length they crop the plot or strand the data in a corner, in a package whose
+    whole premise is that no tube is built in.
+    """
+    xs = [x for _, _, x, _ in PAIRS] or [0.0, 1.0]
+    return min(xs) - pad_lo, max(xs) + pad_hi
 
 
 def _mpl(show: bool):
@@ -148,9 +164,9 @@ def stack_figure(shot_dir: Path, sensor: str, gain: float | None,
                      f"t = 0 at the ignitor spike ({spark_pt * 1e3:.1f} ms into the PT record)",
                      fontsize=10.5)
         ax.set_xlabel("time from ignitor spike (ms)")
-        ax.set_ylabel("distance from closed head (m)")
+        ax.set_ylabel(_axis_label())
         ax.set_xlim(t0_ms, t1_ms)
-        ax.set_ylim(0.3, 8.3)
+        ax.set_ylim(*_span())
         ax.grid(alpha=0.25)
         fig.tight_layout()
 
@@ -159,6 +175,8 @@ def stack_figure(shot_dir: Path, sensor: str, gain: float | None,
             for n in sorted(set(notes)):
                 print(f"  ! {n}")
 
+        fig.subplots_adjust(bottom=max(0.08, fig.subplotpars.bottom))
+        fig.text(0.01, 0.01, rig_stamp(), fontsize=7, color="#6B7280", ha="left")
         out = shot_dir / f"{cfg['prefix']}_stack_{shot_dir.name}.png"
         fig.savefig(out, dpi=150)
         if show:
@@ -271,7 +289,7 @@ def velocity_figure(shot_dir: Path, res: dict, sensor: str,
                      ha="right" if left else "left")
     ax1.set_title(f"{SENSORS[sensor]['front'].capitalize()}-front arrival", fontsize=11)
     ax1.set_xlabel("time from ignitor spike (ms)")
-    ax1.set_ylabel("distance from closed head (m)")
+    ax1.set_ylabel(_axis_label())
     ax1.grid(alpha=0.3)
     if res["fit"]:
         ax1.text(0.03, 0.97, f"straight-line fit {res['fit']:.0f} m/s   R² {res['r2']:.3f}",
@@ -305,9 +323,9 @@ def velocity_figure(shot_dir: Path, res: dict, sensor: str,
         rng = (hi - lo) or max(abs(hi), 1.0)
         ax2.set_ylim(lo - 0.10 * rng, hi + 0.18 * rng)
     ax2.set_title("Segment velocity", fontsize=11)
-    ax2.set_xlabel("distance from closed head (m)   [segment mid-point]")
+    ax2.set_xlabel(_axis_label() + "   [segment mid-point]")
     ax2.set_ylabel("velocity (m/s)")
-    ax2.set_xlim(0, 7.3)
+    ax2.set_xlim(*_span(pad_lo=1.0, pad_hi=0.3))
     ax2.grid(alpha=0.3)
 
     sub = ("flame front — arrival timed at the PEAK of the glow, so read the "
@@ -315,7 +333,10 @@ def velocity_figure(shot_dir: Path, res: dict, sensor: str,
            "pressure front — arrival timed on the leading edge")
     fig.suptitle(f"{shot_dir.name}   ·   {sub}\n"
                  f"ignitor spike at {spark_ms:.1f} ms into the PT record", fontsize=11.5)
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.tight_layout(rect=(0, 0.03, 1, 0.95))
+    # A figure travels: into slides, into email, away from the folder that says
+    # which geometry produced it. The stamp travels with it.
+    fig.text(0.01, 0.01, rig_stamp(), fontsize=7, color="#6B7280", ha="left")
     out = shot_dir / f"velocity_{SENSORS[sensor]['prefix']}_{shot_dir.name}.png"
     fig.savefig(out, dpi=150)
     if show:

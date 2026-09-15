@@ -50,6 +50,18 @@ def load_rig(path=None) -> dict:
     return r
 
 
+def rig_stamp() -> str:
+    """One line naming the rig a result came from, and its fingerprint.
+
+    Printed with every result and written into every CSV and figure. The rig
+    file is editable by design; this is what makes an edit to it answerable
+    afterwards, since nothing else in the output would show one.
+    """
+    if not RIG:
+        return "rig: (none loaded)"
+    return f"rig: {RIG['name']}  [{RIG['fingerprint']}]"
+
+
 def read_group(path: Path, group_name: str, workdir: Path):
     """Open a rig TDMS file, trimming the trailing zero padding the VI leaves."""
     import datetime as dt

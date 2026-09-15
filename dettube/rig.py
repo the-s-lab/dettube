@@ -16,6 +16,8 @@ Set DETTUBE_RIG once in the lab and no one has to pass --rig again.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 from pathlib import Path
 
@@ -286,6 +288,30 @@ def load(path: str | Path | None = None) -> dict:
 
     th = dict(DEFAULTS)
     th.update(raw.get("threshold", {}))
+
+    # A short fingerprint of everything that changes a NUMBER, printed with every
+    # result and written into every CSV.
+    #
+    # A rig file has to stay editable — spools get removed, gauges get moved —
+    # but an edit to it is invisible in the output it changes. Move one station
+    # by 100 mm and a segment velocity shifts by 7% with no warning, a healthy
+    # R-squared, and nothing anywhere to say the geometry is not what it was.
+    # This does not prevent that. It makes it ANSWERABLE afterwards: two results
+    # carrying different fingerprints were not computed from the same tube.
+    #
+    # Deliberately NOT a hash of the file: comments and layout must be free to
+    # change, or the fingerprint moves for reasons that do not matter and people
+    # stop reading it. Only the geometry, the channel map and the thresholds go in.
+    material = json.dumps({
+        "pairs": pairs,
+        "threshold": {k: th[k] for k in sorted(th)},
+        "sensors": {k: {kk: sensors[k][kk] for kk in sorted(sensors[k])
+                        if kk in ("glob", "group", "prefix", "unit", "smooth_ms")}
+                    for k in sorted(sensors)},
+    }, sort_keys=True, default=str).encode()
+    fingerprint = hashlib.sha256(material).hexdigest()[:8]
+
     return dict(path=p, name=raw.get("name", p.stem), origin=raw.get("origin", "the datum"),
                 pairs=pairs, sensors=sensors, groups=groups, threshold=th,
-                conditions=cond or None, event_log=ev or None)
+                conditions=cond or None, event_log=ev or None,
+                fingerprint=fingerprint)

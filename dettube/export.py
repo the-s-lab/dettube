@@ -46,7 +46,7 @@ from pathlib import Path
 import numpy as np
 
 from .analysis import analyse, analyse_pdt
-from .core import GROUPS, SENSORS, find_spark, read_group
+from .core import GROUPS, RIG, SENSORS, find_spark, read_group
 
 DEFAULT_WIN_MS = (-20.0, 120.0)
 
@@ -76,23 +76,26 @@ def export_results(shot: Path, outdir: Path, work: Path) -> list[Path]:
     with open(a_path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["shot", "sensor", "station", "x_m", "channel", "arrival_ms",
-                    "peak", "unit", "status", "note"])
+                    "peak", "unit", "status", "note", "rig", "rig_fingerprint"])
         for sensor, res in results.items():
             used = {x for x, _ in res["points"]}
             for x, r in sorted(res["per"].items()):
                 w.writerow([shot.name, sensor, r["station"], f"{x:.2f}",
                             f"{sensor}-{r['ch']:02d}", f"{r['arrival']:.3f}",
                             f"{r['peak']:.4f}", SENSORS[sensor.lower()]["unit"],
-                            "used" if x in used else "dropped", ""])
+                            "used" if x in used else "dropped", "",
+                            RIG.get("name", ""), RIG.get("fingerprint", "")])
             for note in res["notes"]:
-                w.writerow([shot.name, sensor, "", "", "", "", "", "", "note", note])
+                w.writerow([shot.name, sensor, "", "", "", "", "", "", "note", note,
+                            RIG.get("name", ""), RIG.get("fingerprint", "")])
     print(f"  wrote {a_path.name}  ({human(a_path.stat().st_size)})")
 
     v_path = outdir / f"{shot.name}_velocities.csv"
     with open(v_path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["shot", "sensor", "from_m", "to_m", "length_m", "dt_ms",
-                    "velocity_mps", "fit_mps", "fit_r2", "causally_ordered", "warning"])
+                    "velocity_mps", "fit_mps", "fit_r2", "causally_ordered",
+                    "warning", "rig", "rig_fingerprint"])
         for sensor, res in results.items():
             warn = " | ".join(res.get("warnings", [])).replace("\n", " ")
             for s in res["segments"]:
@@ -101,7 +104,8 @@ def export_results(shot: Path, outdir: Path, work: Path) -> list[Path]:
                             "" if not s["v"] else f"{s['v']:.1f}",
                             "" if res["fit"] is None else f"{res['fit']:.1f}",
                             "" if res["r2"] is None else f"{res['r2']:.4f}",
-                            res["monotonic"], warn])
+                            res["monotonic"], warn,
+                            RIG.get("name", ""), RIG.get("fingerprint", "")])
     print(f"  wrote {v_path.name}  ({human(v_path.stat().st_size)})")
     return [a_path, v_path], spark_pt, pt0
 

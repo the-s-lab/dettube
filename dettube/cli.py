@@ -19,7 +19,8 @@ from . import __version__
 from .analysis import analyse, analyse_pdt
 from .conditions import (SUSPECT_MS, decimals, fmt, read_conditions,
                          write_conditions_csv, write_events_csv)
-from .core import RIG, SENSORS, choose_folder, find_spark, load_rig, read_group
+from .core import (RIG, SENSORS, choose_folder, find_spark, load_rig,
+                   read_group, rig_stamp)
 from .export import export_raw, export_results
 from .plots import plot_stations, stack_figure, velocity_figure
 from .rig import TEMPLATE
@@ -50,7 +51,8 @@ def cmd_rig(args) -> int:
               f"  export DETTUBE_RIG={out.resolve()}")
         return 0
     r = load_rig(args.rig)
-    print(f"\n{r['name']}\n  from {r['path']}\n  x measured from {r['origin']}\n")
+    print(f"\n{r['name']}\n  from {r['path']}\n  fingerprint {r['fingerprint']}"
+          f"\n  x measured from {r['origin']}\n")
     print(f"  {'station':<12}{'x':>8}   channels")
     for odd, even, x, name in r["pairs"]:
         print(f"  {name:<12}{x:>8.2f}   odd {odd:02d} / even {even:02d}")
@@ -99,6 +101,7 @@ def cmd_velocity(args) -> int:
                                      cfg["group"], work)
             res = analyse_pdt(g, inc, spark_pt + (pt0 - gt0).total_seconds())
 
+    print(f"  {rig_stamp()}")
     print(f"  ignitor spike at {spark_pt * 1e3:.2f} ms into the PT record\n")
     for note in res["notes"]:
         print(f"  ! {note}")
@@ -139,6 +142,7 @@ def cmd_conditions(args) -> int:
 
     a, b = res["window"]
     print(f"\nPre-ignition conditions — {res['shot']}")
+    print(f"  {rig_stamp()}")
     print(f"  '{res['group']}' in {res['file']}")
     print(f"  ignitor spike {res['spark_s']:.2f} s into a {res['record_s']:.2f} s record")
     print(f"  averaged over {a:.2f} – {b:.2f} s before it "
